@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>智能配货系统 (云端版)</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <style>
+       body { font-family: 'Inter', sans-serif; }
+       input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+       input[type=number] { -moz-appearance: textfield; }
+       /* 加载动画 */
+       .loader { border: 2px solid #f3f3f3; border-top: 2px solid #3498db; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; }
+       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+   </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+   <div class="max-w-6xl mx-auto">
+       <header class="mb-8 flex justify-between items-center">
+           <div>
+               <h1 class="text-3xl font-bold text-gray-900">智能配货系统 <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2 font-normal align-middle">云端共享版</span></h1>
+               <p class="text-gray-600 mt-2">数据同步存储于服务器，支持多设备共享协作。</p>
+           </div>
+           <!-- 同步状态显示 -->
+           <div id="sync-status" class="text-sm font-medium text-gray-500 flex items-center">
+               准备就绪
+           </div>
+       </header>
+
+       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+           <!-- 左侧：货品管理 -->
+           <div class="lg:col-span-2">
+               <div class="bg-white p-6 rounded-lg shadow-md space-y-6">
+                   <div>
+                       <h2 class="text-2xl font-semibold text-gray-800 mb-4">1. 货品管理</h2>
+                       <form id="product-form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                           <div>
+                               <label for="product-name" class="block text-sm font-medium text-gray-700">货品名称</label>
+                               <input type="text" id="product-name" placeholder="例如: A型号商品" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                           </div>
+                           <div>
+                               <label for="product-price" class="block text-sm font-medium text-gray-700">价格 (元)</label>
+                               <input type="number" id="product-price" placeholder="例如: 50" min="0.01" step="0.01" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                           </div>
+                           <div>
+                               <label for="product-unit" class="block text-sm font-medium text-gray-700">单位</label>
+                               <input type="text" id="product-unit" placeholder="例如: 箱 / 件" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                           </div>
+                           <div class="md:col-span-2">
+                               <label for="product-type" class="block text-sm font-medium text-gray-700">货品类型</label>
+                               <select id="product-type" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                   <option value="fixed">固定数量货品 (例如: 赠品, 必选配件)</option>
+                                   <option value="primary">主要填充货品 (例如: 主力商品A)</option>
+                                   <option value="flexible">补差价货品 (例如: 小件商品B)</option>
+                               </select>
+                               <p class="text-xs text-gray-500 mt-1">“补差价货品”用于自动补齐预算，必须设置一个。</p>
+                           </div>
+                           <div id="form-actions" class="w-full flex items-center space-x-2">
+                               <button type="submit" id="submit-product-btn" class="flex-grow bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                   添加货品
+                               </button>
+                           </div>
+                       </form>
+                   </div>
+                   <!-- 货品列表 -->
+                   <div>
+                       <div class="flex justify-between items-center mb-2">
+                           <h3 class="text-lg font-medium text-gray-800">我的货品库</h3>
+                           <button onclick="APP.loadProducts()" class="text-sm text-blue-600 hover:underline">刷新数据</button>
+                       </div>
+                       <div class="overflow-x-auto border border-gray-200 rounded-md">
+                           <table class="min-w-full divide-y divide-gray-200">
+                               <thead class="bg-gray-50">
+                                   <tr>
+                                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">名称</th>
+                                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">价格</th>
+                                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
+                                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                                   </tr>
+                               </thead>
+                               <tbody id="product-list-body" class="bg-white divide-y divide-gray-200">
+                                   <tr><td colspan="4" class="px-4 py-8 text-center text-gray-500"><div class="loader mr-2"></div>正在从服务器加载数据...</td></tr>
+                               </tbody>
+                           </table>
+                       </div>
+                   </div>
+               </div>
+           </div>
+
+           <!-- 右侧：配货与结果 -->
+           <div class="lg:col-span-1 space-y-6">
+               <div class="bg-white p-6 rounded-lg shadow-md">
+                   <h2 class="text-2xl font-semibold text-gray-800 mb-4">2. 智能配货</h2>
+                   <form id="assortment-form" class="space-y-4">
+                       <div>
+                           <label for="target-budget" class="block text-sm font-medium text-gray-700">目标预算 (元)</label>
+                           <input type="number" id="target-budget" placeholder="例如: 1000" min="1" step="0.01" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                       </div>
+                       <div>
+                           <h3 class="text-lg font-medium text-gray-800 mb-2">固定数量要求</h3>
+                           <div id="constraint-list" class="space-y-3 max-h-48 overflow-y-auto pr-2">
+                               <p class="text-sm text-gray-500">正在加载货品...</p>
+                           </div>
+                       </div>
+                       <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 font-semibold">
+                           开始计算配货
+                       </button>
+                   </form>
+               </div>
+               <div class="bg-white p-6 rounded-lg shadow-md">
+                   <h2 class="text-2xl font-semibold text-gray-800 mb-4">3. 配货方案</h2>
+                   <div id="assortment-error" class="hidden text-sm text-red-600 bg-red-50 p-3 rounded-md mb-4"></div>
+                   <div id="result-output" class="space-y-2 text-gray-500">此处显示结果</div>
+                   <div id="result-summary" class="mt-4 pt-4 border-t border-gray-200"></div>
+               </div>
+           </div>
+       </div>
+   </div>
+
+   <script>
+       const APP = {
+           products: [],
+           editingProductId: null,
+           apiUrl: 'api.php', // 指向刚才创建的后端文件
+
+           init() {
+               document.addEventListener('DOMContentLoaded', () => {
+                   this.loadProducts(); // 初始加载
+                   document.getElementById('product-form').addEventListener('submit', this.handleProductFormSubmit.bind(this));
+                   document.getElementById('assortment-form').addEventListener('submit', this.calculateAssortment.bind(this));
+               });
+           },
+
+           // --- 服务器交互核心函数 ---
+           updateStatus(msg, type = 'normal') {
+               const el = document.getElementById('sync-status');
+               el.innerHTML = type === 'loading' ? `<div class="loader mr-2 text-blue-500"></div> ${msg}` : msg;
+               el.className = `text-sm font-medium flex items-center ${type === 'error' ? 'text-red-600' : 'text-gray-500'}`;
+           },
+
+           // 1. 从服务器读取数据
+           async loadProducts() {
+               this.updateStatus('正在同步数据...', 'loading');
+               try {
+                   // 添加时间戳防止浏览器缓存
+                   const response = await fetch(`${this.apiUrl}?t=${new Date().getTime()}`);
+                   if (!response.ok) throw new Error('网络响应错误');
+                   
+                   const data = await response.json();
+                   this.products = Array.isArray(data) ? data : [];
+                   this.render();
+                   this.updateStatus('数据已同步', 'normal');
+               } catch (error) {
+                   console.error('加载失败:', error);
+                   this.updateStatus('数据同步失败，请检查网络或服务器', 'error');
+                   // 如果失败，列表显示空状态
+                   if(this.products.length === 0) {
+                       document.getElementById('product-list-body').innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-red-500">无法连接服务器</td></tr>';
+                   }
+               }
+           },
+
+           // 2. 保存数据到服务器
+           async saveProductsToServer() {
+               const btn = document.getElementById('submit-product-btn');
+               const originalText = btn.textContent;
+               btn.disabled = true;
+               btn.textContent = '正在保存...';
+               this.updateStatus('正在保存到云端...', 'loading');
+
+               try {
+                   const response = await fetch(this.apiUrl, {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify(this.products)
+                   });
+
+                   if (!response.ok) throw new Error('保存失败');
+                   
+                   this.updateStatus('保存成功', 'normal');
+                   btn.disabled = false;
+                   btn.textContent = originalText;
+                   return true;
+               } catch (error) {
+                   alert('保存到服务器失败！请检查网络连接。');
+                   this.updateStatus('保存失败', 'error');
+                   btn.disabled = false;
+                   btn.textContent = originalText;
+                   return false;
+               }
+           },
+
+           // --- 以下是业务逻辑 (与之前类似，但调用 saveProductsToServer) ---
+
+           render() {
+               this.renderProductList();
+               this.renderConstraintList();
+           },
+
+           renderProductList() {
+               const listBody = document.getElementById('product-list-body');
+               listBody.innerHTML = '';
+               if (this.products.length === 0) {
+                   listBody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-gray-500 text-center">暂无货品，请添加。</td></tr>';
+                   return;
+               }
+               this.products.forEach(p => {
+                   let typeText = '';
+                   switch (p.type) {
+                       case 'fixed': typeText = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">固定数量</span>'; break;
+                       case 'primary': typeText = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">主要填充</span>'; break;
+                       case 'flexible': typeText = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">补差价</span>'; break;
+                   }
+                   listBody.innerHTML += `
+                       <tr>
+                           <td class="px-4 py-3"><div class="text-sm font-medium text-gray-900">${p.name}</div><div class="text-xs text-gray-500">${p.unit}</div></td>
+                           <td class="px-4 py-3 text-sm text-gray-700">${p.price.toFixed(2)} 元</td>
+                           <td class="px-4 py-3">${typeText}</td>
+                           <td class="px-4 py-3 text-sm font-medium">
+                               <button onclick="APP.startEdit('${p.id}')" class="text-blue-600 hover:text-blue-900 mr-3">修改</button>
+                               <button onclick="APP.deleteProduct('${p.id}')" class="text-red-600 hover:text-red-900">删除</button>
+                           </td>
+                       </tr>
+                   `;
+               });
+           },
+
+           renderConstraintList() {
+               const constraintList = document.getElementById('constraint-list');
+               constraintList.innerHTML = '';
+               const fixedProducts = this.products.filter(p => p.type === 'fixed');
+               if (fixedProducts.length === 0) {
+                   constraintList.innerHTML = '<p class="text-sm text-gray-500">请先在左侧添加“固定数量货品”。</p>';
+                   return;
+               }
+               fixedProducts.forEach(p => {
+                   constraintList.innerHTML += `
+                       <div class="flex justify-between items-center">
+                           <label class="text-sm font-medium text-gray-700">${p.name} (${p.unit})</label>
+                           <input type="number" data-product-id="${p.id}" class="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm" min="0" placeholder="数量">
+                       </div>
+                   `;
+               });
+           },
+
+           async handleProductFormSubmit(e) {
+               e.preventDefault();
+               if (this.editingProductId) this.updateProduct();
+               else this.addProduct();
+           },
+
+           async addProduct() {
+               const name = document.getElementById('product-name').value.trim();
+               const price = parseFloat(document.getElementById('product-price').value);
+               const unit = document.getElementById('product-unit').value.trim();
+               const type = document.getElementById('product-type').value;
+
+               if (!name || isNaN(price) || !unit) return alert("请填写完整");
+
+               // 保证只有一个补差价
+               if (type === 'flexible') {
+                   this.products.forEach(p => { if (p.type === 'flexible') p.type = 'primary'; });
+               }
+
+               this.products.push({ id: crypto.randomUUID(), name, price, unit, type });
+               
+               const success = await this.saveProductsToServer();
+               if(success) {
+                   this.render();
+                   this.resetProductForm();
+               }
+           },
+
+           async updateProduct() {
+               const idx = this.products.findIndex(p => p.id === this.editingProductId);
+               if (idx === -1) return;
+
+               const name = document.getElementById('product-name').value.trim();
+               const price = parseFloat(document.getElementById('product-price').value);
+               const unit = document.getElementById('product-unit').value.trim();
+               const type = document.getElementById('product-type').value;
+
+               if (type === 'flexible') {
+                   this.products.forEach(p => { if (p.type === 'flexible' && p.id !== this.editingProductId) p.type = 'primary'; });
+               }
+
+               this.products[idx] = { ...this.products[idx], name, price, unit, type };
+               
+               const success = await this.saveProductsToServer();
+               if(success) {
+                   this.render();
+                   this.resetProductForm();
+               }
+           },
+
+           async deleteProduct(id) {
+               if (!confirm('确定要删除吗？此操作无法撤销并且会同步给所有人。')) return;
+               this.products = this.products.filter(p => p.id !== id);
+               const success = await this.saveProductsToServer();
+               if(success) this.render();
+           },
+
+           startEdit(id) {
+               const product = this.products.find(p => p.id === id);
+               if (!product) return;
+               this.editingProductId = id;
+               document.getElementById('product-name').value = product.name;
+               document.getElementById('product-price').value = product.price;
+               document.getElementById('product-unit').value = product.unit;
+               document.getElementById('product-type').value = product.type;
+               const btn = document.getElementById('submit-product-btn');
+               btn.textContent = '保存修改';
+               btn.classList.replace('bg-blue-600', 'bg-yellow-500');
+               btn.classList.replace('hover:bg-blue-700', 'hover:bg-yellow-600');
+               
+               // 添加取消按钮
+               if (!document.getElementById('cancel-edit-btn')) {
+                   const cancel = document.createElement('button');
+                   cancel.id = 'cancel-edit-btn';
+                   cancel.type = 'button';
+                   cancel.textContent = '取消';
+                   cancel.className = 'w-1/3 bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400';
+                   cancel.onclick = () => this.resetProductForm();
+                   document.getElementById('form-actions').appendChild(cancel);
+               }
+           },
+
+           resetProductForm() {
+               document.getElementById('product-form').reset();
+               this.editingProductId = null;
+               const btn = document.getElementById('submit-product-btn');
+               btn.textContent = '添加货品';
+               btn.classList.replace('bg-yellow-500', 'bg-blue-600');
+               btn.classList.replace('hover:bg-yellow-600', 'hover:bg-blue-700');
+               const cancel = document.getElementById('cancel-edit-btn');
+               if (cancel) cancel.remove();
+           },
+
+           calculateAssortment(e) {
+               e.preventDefault();
+               document.getElementById('assortment-error').classList.add('hidden');
+               const output = document.getElementById('result-output');
+               const summary = document.getElementById('result-summary');
+               output.innerHTML = ''; summary.innerHTML = '';
+
+               const budget = parseFloat(document.getElementById('target-budget').value);
+               const flexible = this.products.find(p => p.type === 'flexible');
+               
+               if (!flexible) return alert('请先设置一个“补差价货品”');
+               
+               const primary = this.products.filter(p => p.type === 'primary').sort((a, b) => b.price - a.price);
+               let bundle = new Map();
+               let total = 0;
+
+               // 1. 固定
+               document.querySelectorAll('#constraint-list input').forEach(inp => {
+                   const qty = parseInt(inp.value) || 0;
+                   if (qty > 0) {
+                       const p = this.products.find(prod => prod.id === inp.dataset.productId);
+                       if(p) { bundle.set(p.id, qty); total += qty * p.price; }
+                   }
+               });
+
+               // 2. 填充
+               let gap = budget - total;
+               if (gap > 0) {
+                   primary.forEach(p => {
+                       if (gap >= p.price) {
+                           const count = Math.floor(gap / p.price);
+                           if (count > 0) {
+                               bundle.set(p.id, (bundle.get(p.id) || 0) + count);
+                               total += count * p.price;
+                               gap -= count * p.price;
+                           }
+                       }
+                   });
+               }
+
+               // 3. 补差
+               gap = budget - total;
+               if (gap > 0) {
+                   const count = Math.ceil(gap / flexible.price);
+                   bundle.set(flexible.id, (bundle.get(flexible.id) || 0) + count);
+                   total += count * flexible.price;
+               }
+
+               // 渲染
+               let html = '<ul class="space-y-2">';
+               bundle.forEach((q, pid) => {
+                   const p = this.products.find(v => v.id === pid);
+                   html += `<li class="flex justify-between text-sm"><span class="text-gray-800">${p.name}</span><span class="text-gray-600">x ${q} = <strong>${(p.price * q).toFixed(2)}</strong></span></li>`;
+               });
+               output.innerHTML = html + '</ul>';
+               summary.innerHTML = `<p class="text-lg font-bold text-gray-900">总计: <span class="text-green-700">${total.toFixed(2)}</span></p><p class="text-sm text-gray-500">目标: ${budget}</p>`;
+               if(total > budget) summary.innerHTML += `<p class="text-sm text-orange-600">超支: ${(total-budget).toFixed(2)}</p>`;
+           }
+       };
+       APP.init();
+   </script>
+</body>
+</html>
