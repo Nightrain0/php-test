@@ -2,14 +2,14 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>智能配货系统 Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         /* 隐藏数字输入框的箭头 */
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
@@ -32,15 +32,20 @@
         /* 简单动画 */
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 移动端输入框防缩放 hack */
+        @media screen and (max-width: 768px) {
+            input, select, textarea { font-size: 16px !important; }
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-4 md:p-6 relative">
+<body class="bg-gray-50 min-h-screen p-3 md:p-6 relative pb-20 md:pb-6">
     <!-- 消息提示容器 -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-4 left-4 right-4 md:left-auto md:right-4 z-50 flex flex-col gap-2 pointer-events-none items-center md:items-end"></div>
 
     <!-- 确认删除模态框 -->
-    <div id="confirm-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm opacity-0 transition-opacity duration-300">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4 transform scale-95 transition-transform duration-300" id="confirm-modal-content">
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-300" id="confirm-modal-content">
             <div class="text-center">
                 <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                     <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -49,11 +54,11 @@
                 </div>
                 <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">确认删除商品？</h3>
                 <p class="text-sm text-gray-500 mb-6">该操作将从数据库中永久移除此商品，无法撤销。</p>
-                <div class="flex flex-col gap-2">
-                    <button id="confirm-delete-btn" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm">
+                <div class="flex flex-col gap-3">
+                    <button id="confirm-delete-btn" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-3 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none active:bg-red-800">
                         确认删除
                     </button>
-                    <button onclick="APP.hideConfirmModal()" class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
+                    <button onclick="APP.hideConfirmModal()" class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-3 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none active:bg-gray-100">
                         取消
                     </button>
                 </div>
@@ -63,26 +68,105 @@
 
     <div class="max-w-7xl mx-auto">
         <!-- 顶部栏 -->
-        <header class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center">
-                <div class="bg-purple-600 text-white p-2 rounded-lg mr-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 3.659c0 3.074-1.8 5.159-2.83 8.15l1.106.635a26.775 26.775 0 015.503 3.725 12.318 12.318 0 01-6.8 0C9.483 18.334 8.173 10.659 9 7z" /></svg>
+        <header class="mb-4 md:mb-6 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center w-full md:w-auto">
+                <div class="bg-purple-600 text-white p-2 rounded-lg mr-3 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 3.659c0 3.074-1.8 5.159-2.83 8.15l1.106.635a26.775 26.775 0 015.503 3.725 12.318 12.318 0 01-6.8 0C9.483 18.334 8.173 10.659 9 7z" /></svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">智能配货系统 <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200 ml-1 align-middle">Pro版</span></h1>
-                    <p class="text-xs text-gray-500 mt-1">云端数据同步 · 智能分类 · 自动计算</p>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">智能配货 <span class="text-[10px] md:text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full border border-purple-200 ml-1 align-middle">v2.3</span></h1>
+                </div>
+                <div class="ml-auto md:hidden">
+                    <div id="sync-status-mobile" class="text-xs font-medium text-gray-500 flex items-center bg-gray-100 px-2 py-1 rounded-full">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1.5"></span> 待命
+                    </div>
                 </div>
             </div>
-            <div id="sync-status" class="text-sm font-medium text-gray-500 flex items-center bg-gray-100 px-3 py-1.5 rounded-full">
+            <div id="sync-status" class="hidden md:flex text-sm font-medium text-gray-500 items-center bg-gray-100 px-3 py-1.5 rounded-full">
                 <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span> 准备就绪
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 主布局：使用 Flex column 在移动端控制顺序 -->
+        <div class="flex flex-col lg:grid lg:grid-cols-12 gap-4 md:gap-6">
             
-            <!-- 左侧：货品数据库 (占 7 列) -->
-            <div class="lg:col-span-7 flex flex-col gap-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
+            <!-- 区域1：配货计算器 (移动端显示在最上方 order-1, 桌面端在右侧 order-2) -->
+            <div class="order-1 lg:order-2 lg:col-span-5 flex flex-col gap-4 md:gap-6">
+                
+                <!-- 计算面板 -->
+                <div class="bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden">
+                    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 md:p-5">
+                        <h2 class="text-lg md:text-xl font-bold text-white flex items-center">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 mr-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 3.659c0 3.074-1.8 5.159-2.83 8.15l1.106.635a26.775 26.775 0 015.503 3.725 12.318 12.318 0 01-6.8 0C9.483 18.334 8.173 10.659 9 7z" /></svg>
+                            开始配货
+                        </h2>
+                    </div>
+
+                    <form id="assortment-form" class="p-4 md:p-5 space-y-4 md:space-y-5">
+                        <!-- 预算输入 -->
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1.5">💰 目标总预算 (元)</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 text-base">¥</span>
+                                </div>
+                                <!-- inputmode="decimal" 唤起数字键盘 -->
+                                <input type="number" id="target-budget" inputmode="decimal" class="block w-full pl-8 pr-12 py-3 border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-xl md:text-lg font-bold text-gray-900 placeholder-gray-300" placeholder="0.00" required step="0.01">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">RMB</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 固定要求区域 -->
+                        <div class="border border-gray-200 rounded-lg bg-gray-50 overflow-hidden flex flex-col">
+                            <div class="p-3 bg-gray-100 border-b border-gray-200 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                                <span class="text-sm font-bold text-gray-700">📋 必选商品 (选填)</span>
+                                <div class="relative w-36">
+                                    <input type="text" id="constraint-search" placeholder="搜索..." class="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 rounded-full focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                                    <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                </div>
+                            </div>
+                            
+                            <div id="constraint-list" class="p-2 space-y-2 max-h-[40vh] md:max-h-[400px] overflow-y-auto custom-scroll relative bg-gray-50/50">
+                                <p class="text-center text-gray-400 text-sm py-8">数据加载中...</p>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-lg font-bold py-3.5 md:py-3 px-4 rounded-xl shadow-lg shadow-purple-200 transform transition-all duration-200 flex justify-center items-center touch-manipulation">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            开始计算
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 结果面板 -->
+                <div id="result-panel" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-5 hidden">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">🧾 配货清单</h3>
+                    <div id="result-content" class="space-y-2 mb-6"></div>
+                    <div id="result-summary" class="bg-gray-50 rounded-lg p-4 border border-gray-100"></div>
+                </div>
+            </div>
+            
+            <!-- 区域2：货品数据库 (移动端显示在下方 order-2, 桌面端在左侧 order-1) -->
+            <div class="order-2 lg:order-1 lg:col-span-7 flex flex-col gap-4 md:gap-6">
+                
+                <!-- 移动端折叠容器：默认只显示标题，点击展开 -->
+                <details class="lg:hidden group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <summary class="p-4 font-semibold text-gray-700 flex justify-between items-center bg-gray-50 select-none">
+                        <span class="flex items-center"><svg class="w-5 h-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> 管理货品数据库</span>
+                        <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100 group-open:hidden">点击展开</span>
+                        <svg class="arrow w-5 h-5 text-gray-400 hidden group-open:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="p-4 border-t border-gray-100">
+                        <!-- 移动端展开后显示下面的内容 -->
+                        <div id="mobile-db-container"></div>
+                    </div>
+                </details>
+
+                <!-- 桌面端默认显示的容器 -->
+                <div id="desktop-db-container" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hidden lg:flex">
+                    <!-- 内容由 JS 动态插入或保持静态结构 -->
                     <div class="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-gray-800 flex items-center">
                             <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
@@ -99,26 +183,26 @@
                         <form id="product-form" class="grid grid-cols-12 gap-3 items-end">
                             <div class="col-span-12 md:col-span-4">
                                 <label class="block text-xs font-medium text-gray-500 mb-1">货品名称</label>
-                                <input type="text" id="product-name" placeholder="如: 香1(把)" required class="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition">
+                                <input type="text" id="product-name" placeholder="如: 香1(把)" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition text-base md:text-sm">
                             </div>
                             <div class="col-span-6 md:col-span-2">
                                 <label class="block text-xs font-medium text-gray-500 mb-1">价格(元)</label>
-                                <input type="number" id="product-price" placeholder="0.00" min="0.01" step="0.01" required class="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition">
+                                <input type="number" id="product-price" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition text-base md:text-sm">
                             </div>
                             <div class="col-span-6 md:col-span-2">
                                 <label class="block text-xs font-medium text-gray-500 mb-1">单位</label>
-                                <input type="text" id="product-unit" placeholder="件" required class="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition">
+                                <input type="text" id="product-unit" placeholder="件" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition text-base md:text-sm">
                             </div>
                             <div class="col-span-8 md:col-span-2">
                                 <label class="block text-xs font-medium text-gray-500 mb-1">类型</label>
-                                <select id="product-type" class="w-full text-sm px-2 py-2 border border-gray-300 bg-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition">
+                                <select id="product-type" class="w-full px-2 py-2 border border-gray-300 bg-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition text-base md:text-sm">
                                     <option value="fixed">🔵 固定需求</option>
                                     <option value="primary">🟢 主要填充</option>
                                     <option value="flexible">🟣 补差价</option>
                                 </select>
                             </div>
                             <div class="col-span-4 md:col-span-2 flex items-center" id="form-actions">
-                                <button type="submit" id="submit-product-btn" class="w-full bg-gray-900 hover:bg-black text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors duration-200">
+                                <button type="submit" id="submit-product-btn" class="w-full bg-gray-900 hover:bg-black text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors duration-200 h-[42px] md:h-auto">
                                     添加
                                 </button>
                             </div>
@@ -130,10 +214,10 @@
                         <table class="min-w-full divide-y divide-gray-100">
                             <thead class="bg-gray-50 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称/单位</th>
-                                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">单价</th>
-                                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
-                                    <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    <th class="px-4 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                                    <th class="px-4 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">单价</th>
+                                    <th class="px-4 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                                    <th class="px-4 md:px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="product-list-body" class="bg-white divide-y divide-gray-100">
@@ -143,69 +227,10 @@
                     </div>
                 </div>
             </div>
-
-            <!-- 右侧：配货计算器 (占 5 列) -->
-            <div class="lg:col-span-5 flex flex-col gap-6">
-                
-                <!-- 1. 计算面板 -->
-                <div class="bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden">
-                    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-5">
-                        <h2 class="text-xl font-bold text-white flex items-center">
-                            <svg class="w-6 h-6 mr-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 3.659c0 3.074-1.8 5.159-2.83 8.15l1.106.635a26.775 26.775 0 015.503 3.725 12.318 12.318 0 01-6.8 0C9.483 18.334 8.173 10.659 9 7z" /></svg>
-                            智能配货
-                        </h2>
-                        <p class="text-purple-100 text-sm mt-1 opacity-90">输入预算和固定要求，自动凑单。</p>
-                    </div>
-
-                    <form id="assortment-form" class="p-5 space-y-5">
-                        <!-- 预算输入 -->
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-2">💰 目标总预算 (元)</label>
-                            <div class="relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm">¥</span>
-                                </div>
-                                <input type="number" id="target-budget" class="block w-full pl-7 pr-12 py-3 border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-lg font-semibold text-gray-900 placeholder-gray-300" placeholder="0.00" required step="0.01">
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm">RMB</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 固定要求区域 (改进版) -->
-                        <div class="border border-gray-200 rounded-lg bg-gray-50 overflow-hidden flex flex-col">
-                            <div class="p-3 bg-gray-100 border-b border-gray-200 flex justify-between items-center sticky top-0 z-10">
-                                <span class="text-sm font-bold text-gray-700">📋 固定数量要求</span>
-                                <div class="relative w-32 md:w-40">
-                                    <input type="text" id="constraint-search" placeholder="搜索物品..." class="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:border-purple-500">
-                                    <svg class="w-3 h-3 text-gray-400 absolute left-2 top-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                </div>
-                            </div>
-                            
-                            <!-- 这里是分类列表容器 -->
-                            <div id="constraint-list" class="p-2 space-y-2 max-h-[400px] overflow-y-auto custom-scroll relative">
-                                <p class="text-center text-gray-400 text-sm py-8">数据加载中...</p>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold py-3 px-4 rounded-xl shadow-lg shadow-purple-200 transform hover:-translate-y-0.5 transition-all duration-200 flex justify-center items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                            开始计算
-                        </button>
-                    </form>
-                </div>
-
-                <!-- 2. 结果面板 -->
-                <div id="result-panel" class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hidden">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">🧾 配货清单</h3>
-                    <div id="result-content" class="space-y-2 mb-6"></div>
-                    <div id="result-summary" class="bg-gray-50 rounded-lg p-4 border border-gray-100"></div>
-                </div>
-            </div>
         </div>
 
-        <div class="mt-8 text-center text-gray-400 text-xs">
-            System v2.2 | Fixed Interactive Elements
+        <div class="mt-8 text-center text-gray-400 text-xs pb-4">
+            System v2.3 | Mobile Optimized
         </div>
     </div>
 
@@ -221,9 +246,13 @@
         const APP = {
             products: [],
             editingProductId: null,
-            pendingDeleteId: null, // 用于存储待删除的ID
+            pendingDeleteId: null,
 
             init() {
+                // 移动端内容复制逻辑: 如果是手机，把桌面端的管理界面移动到折叠面板里
+                this.handleMobileLayout();
+                window.addEventListener('resize', () => this.handleMobileLayout());
+
                 document.addEventListener('DOMContentLoaded', () => {
                     if (!CONFIG.BIN_ID || CONFIG.BIN_ID.includes('请在这里')) {
                         this.showToast('错误：请配置 JSONBin API Key', 'error');
@@ -231,30 +260,57 @@
                     }
                     this.loadProducts();
                     
-                    document.getElementById('product-form').addEventListener('submit', (e) => this.handleProductFormSubmit(e));
-                    document.getElementById('assortment-form').addEventListener('submit', (e) => this.calculateAssortment(e));
+                    // 重新绑定表单事件（因为可能被移动了 DOM）
+                    document.addEventListener('submit', (e) => {
+                        if(e.target && e.target.id === 'product-form') this.handleProductFormSubmit(e);
+                        if(e.target && e.target.id === 'assortment-form') this.calculateAssortment(e);
+                    });
                     
-                    // 搜索框实时过滤
                     document.getElementById('constraint-search').addEventListener('input', (e) => {
                         this.filterConstraints(e.target.value);
                     });
 
-                    // 绑定确认删除按钮
                     document.getElementById('confirm-delete-btn').addEventListener('click', () => this.confirmDeleteAction());
                 });
             },
 
-            // --- UI 工具函数 ---
+            handleMobileLayout() {
+                const desktopContainer = document.getElementById('desktop-db-container');
+                const mobileContainer = document.getElementById('mobile-db-container');
+                
+                if (window.innerWidth < 1024) {
+                    // Mobile mode: Move content to details > div
+                    if (desktopContainer.children.length > 0) {
+                        while (desktopContainer.childNodes.length > 0) {
+                            mobileContainer.appendChild(desktopContainer.childNodes[0]);
+                        }
+                        desktopContainer.classList.add('hidden'); // Hide empty desktop shell
+                    }
+                } else {
+                    // Desktop mode: Move content back
+                    if (mobileContainer.children.length > 0) {
+                        while (mobileContainer.childNodes.length > 0) {
+                            desktopContainer.appendChild(mobileContainer.childNodes[0]);
+                        }
+                        desktopContainer.classList.remove('hidden');
+                    }
+                }
+            },
 
             updateStatus(msg, type = 'normal') {
-                const el = document.getElementById('sync-status');
-                let colorClass = type === 'error' ? 'bg-red-100 text-red-600' : (type === 'loading' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600');
-                let dotColor = type === 'error' ? 'bg-red-500' : (type === 'loading' ? 'bg-blue-500' : 'bg-green-500');
+                // 同时更新桌面和移动端的状态指示器
+                const els = [document.getElementById('sync-status'), document.getElementById('sync-status-mobile')];
                 
-                el.className = `text-xs font-semibold flex items-center px-3 py-1 rounded-full transition-all duration-300 ${colorClass}`;
-                el.innerHTML = type === 'loading' 
-                    ? `<div class="loader mr-2" style="width:10px;height:10px;border-width:2px;"></div> ${msg}` 
-                    : `<span class="w-2 h-2 rounded-full ${dotColor} mr-2"></span> ${msg}`;
+                els.forEach(el => {
+                    if(!el) return;
+                    let colorClass = type === 'error' ? 'bg-red-100 text-red-600' : (type === 'loading' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600');
+                    let dotColor = type === 'error' ? 'bg-red-500' : (type === 'loading' ? 'bg-blue-500' : 'bg-green-500');
+                    
+                    el.className = `text-xs font-semibold flex items-center px-3 py-1 rounded-full transition-all duration-300 ${colorClass}`;
+                    el.innerHTML = type === 'loading' 
+                        ? `<div class="loader mr-2" style="width:10px;height:10px;border-width:2px;"></div> ${msg}` 
+                        : `<span class="w-2 h-2 rounded-full ${dotColor} mr-2"></span> ${msg}`;
+                });
             },
 
             showToast(message, type = 'normal') {
@@ -264,23 +320,19 @@
                 const bgColor = type === 'error' ? 'bg-red-500' : 'bg-gray-800';
                 const icon = type === 'error' ? '⚠️' : 'ℹ️';
                 
-                toast.className = `${bgColor} text-white text-sm px-4 py-3 rounded-lg shadow-lg flex items-center pointer-events-auto fade-in transform transition-all duration-500`;
+                toast.className = `${bgColor} text-white text-sm px-4 py-3 rounded-lg shadow-lg flex items-center pointer-events-auto fade-in transform transition-all duration-500 max-w-[90vw]`;
                 toast.innerHTML = `
-                    <span class="mr-2">${icon}</span>
-                    <span>${message}</span>
+                    <span class="mr-2 text-lg">${icon}</span>
+                    <span class="font-medium">${message}</span>
                 `;
                 
                 container.appendChild(toast);
-                
-                // 3秒后自动消失
                 setTimeout(() => {
                     toast.style.opacity = '0';
                     toast.style.transform = 'translateY(-10px)';
                     setTimeout(() => toast.remove(), 500);
                 }, 3000);
             },
-
-            // --- 核心逻辑 ---
 
             async loadProducts() {
                 this.updateStatus('同步中...', 'loading');
@@ -296,8 +348,7 @@
                 } catch (error) {
                     console.error(error);
                     this.updateStatus('同步失败', 'error');
-                    this.showToast('无法连接数据库，请检查网络', 'error');
-                    document.getElementById('product-list-body').innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500 text-sm">无法连接数据库。</td></tr>';
+                    this.showToast('无法连接数据库', 'error');
                 }
             },
 
@@ -319,7 +370,7 @@
                     btn.innerHTML = oldText;
                     return true;
                 } catch (e) {
-                    this.showToast('保存失败，请重试', 'error');
+                    this.showToast('保存失败', 'error');
                     this.updateStatus('保存失败', 'error');
                     btn.disabled = false;
                     btn.innerHTML = oldText;
@@ -355,15 +406,15 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50 transition-colors";
                     tr.innerHTML = `
-                        <td class="px-5 py-3">
+                        <td class="px-4 py-3">
                             <div class="text-sm font-medium text-gray-900">${p.name}</div>
                             <div class="text-xs text-gray-400">${p.unit}</div>
                         </td>
-                        <td class="px-5 py-3 text-sm text-gray-600">¥${p.price.toFixed(2)}</td>
-                        <td class="px-5 py-3">${badge}</td>
-                        <td class="px-5 py-3 text-right text-sm font-medium space-x-2">
-                            <button onclick="APP.startEdit('${p.id}')" class="text-indigo-600 hover:text-indigo-900">修改</button>
-                            <button onclick="APP.showConfirmModal('${p.id}')" class="text-red-600 hover:text-red-900">删除</button>
+                        <td class="px-4 py-3 text-sm text-gray-600">¥${p.price.toFixed(2)}</td>
+                        <td class="px-4 py-3">${badge}</td>
+                        <td class="px-4 py-3 text-right text-sm font-medium space-x-2 whitespace-nowrap">
+                            <button onclick="APP.startEdit('${p.id}')" class="text-indigo-600 hover:text-indigo-900 px-1">修改</button>
+                            <button onclick="APP.showConfirmModal('${p.id}')" class="text-red-600 hover:text-red-900 px-1">删除</button>
                         </td>
                     `;
                     list.appendChild(tr);
@@ -377,7 +428,7 @@
                 const fixedItems = this.products.filter(p => p.type === 'fixed');
                 
                 if (fixedItems.length === 0) {
-                    container.innerHTML = '<div class="text-center py-8 text-gray-400 text-xs bg-white rounded border border-dashed border-gray-200">没有固定物品。<br>请在左侧添加类型为"固定需求"的商品。</div>';
+                    container.innerHTML = '<div class="text-center py-8 text-gray-400 text-xs bg-white rounded border border-dashed border-gray-200">没有固定物品。<br>请在下方数据库添加"固定需求"商品。</div>';
                     return;
                 }
 
@@ -400,29 +451,31 @@
                     
                     const details = document.createElement('details');
                     details.className = "group bg-white rounded border border-gray-200 overflow-hidden mb-2 shadow-sm";
-                    if (items.length > 0) details.open = false; 
+                    // 默认折叠，点击展开，节省手机空间
+                    details.open = false; 
 
                     const summary = document.createElement('summary');
-                    summary.className = "px-3 py-2 bg-gray-50 text-xs font-bold text-gray-700 flex justify-between items-center select-none hover:bg-gray-100";
+                    summary.className = "px-3 py-2.5 bg-gray-50 text-sm font-bold text-gray-700 flex justify-between items-center select-none hover:bg-gray-100 active:bg-gray-200 transition-colors";
                     summary.innerHTML = `
-                        <span class="flex items-center gap-2">${catName} <span class="font-normal text-gray-400 text-[10px] bg-white px-1.5 rounded border border-gray-200">${items.length}种</span></span>
-                        <svg class="arrow w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <span class="flex items-center gap-2">${catName} <span class="font-normal text-gray-400 text-xs bg-white px-1.5 rounded border border-gray-200">${items.length}</span></span>
+                        <svg class="arrow w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     `;
 
                     const content = document.createElement('div');
-                    content.className = "p-2 grid grid-cols-2 gap-2"; 
+                    content.className = "p-2 grid grid-cols-1 sm:grid-cols-2 gap-2"; 
 
                     items.forEach(item => {
                         const div = document.createElement('div');
-                        div.className = "constraint-item relative flex items-center bg-gray-50 rounded border border-gray-100 p-1.5 hover:border-purple-200 transition-colors";
+                        div.className = "constraint-item relative flex items-center bg-white rounded border border-gray-100 p-2 hover:border-purple-200 transition-colors";
                         div.dataset.searchText = item.name.toLowerCase();
                         
                         div.innerHTML = `
-                            <div class="flex-1 min-w-0 mr-2">
-                                <div class="text-xs font-medium text-gray-700 truncate" title="${item.name}">${item.name}</div>
-                                <div class="text-[10px] text-gray-400">¥${item.price}/${item.unit}</div>
+                            <div class="flex-1 min-w-0 mr-2" onclick="document.getElementById('inp-${item.id}').focus()">
+                                <div class="text-sm font-medium text-gray-800 truncate" title="${item.name}">${item.name}</div>
+                                <div class="text-xs text-gray-500">¥${item.price}/${item.unit}</div>
                             </div>
-                            <input type="number" data-product-id="${item.id}" class="w-12 h-7 text-center text-sm border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500" placeholder="0" min="0">
+                            <!-- 增大输入框方便点击 -->
+                            <input type="number" id="inp-${item.id}" inputmode="numeric" data-product-id="${item.id}" class="w-16 h-9 text-center text-base border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="0" min="0">
                         `;
                         content.appendChild(div);
                     });
@@ -462,8 +515,6 @@
                 });
             },
 
-            // --- 表单与删除逻辑优化 ---
-
             async handleProductFormSubmit(e) {
                 e.preventDefault();
                 const name = document.getElementById('product-name').value.trim();
@@ -495,6 +546,11 @@
             startEdit(id) {
                 const p = this.products.find(x => x.id === id);
                 if (!p) return;
+                
+                // 如果在移动端且数据库面板折叠，自动展开
+                const mobileDetails = document.querySelector('details.lg\\:hidden');
+                if(mobileDetails) mobileDetails.open = true;
+
                 this.editingProductId = id;
                 document.getElementById('product-name').value = p.name;
                 document.getElementById('product-price').value = p.price;
@@ -503,17 +559,20 @@
                 
                 const btn = document.getElementById('submit-product-btn');
                 btn.innerText = '保存修改';
-                btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors";
+                btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors h-[42px] md:h-auto";
                 
                 if(!document.getElementById('cancel-btn')) {
                     const cBtn = document.createElement('button');
                     cBtn.id = 'cancel-btn';
                     cBtn.type = 'button';
                     cBtn.innerText = '取消';
-                    cBtn.className = "ml-2 text-xs text-gray-500 underline";
+                    cBtn.className = "ml-2 text-xs text-gray-500 underline p-2";
                     cBtn.onclick = () => this.resetForm();
                     document.getElementById('form-actions').appendChild(cBtn);
                 }
+                
+                // 滚动到表单
+                document.getElementById('product-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
             },
 
             resetForm() {
@@ -521,19 +580,16 @@
                 this.editingProductId = null;
                 const btn = document.getElementById('submit-product-btn');
                 btn.innerText = '添加';
-                btn.className = "w-full bg-gray-900 hover:bg-black text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors duration-200";
+                btn.className = "w-full bg-gray-900 hover:bg-black text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors duration-200 h-[42px] md:h-auto";
                 const cBtn = document.getElementById('cancel-btn');
                 if(cBtn) cBtn.remove();
             },
 
-            // --- 删除功能（模态框版） ---
-            
             showConfirmModal(id) {
                 this.pendingDeleteId = id;
                 const modal = document.getElementById('confirm-modal');
                 const content = document.getElementById('confirm-modal-content');
                 modal.classList.remove('hidden');
-                // 稍微延迟加 opacity 实现渐变
                 setTimeout(() => {
                     modal.classList.remove('opacity-0');
                     content.classList.remove('scale-95');
@@ -555,23 +611,17 @@
 
             async confirmDeleteAction() {
                 if (!this.pendingDeleteId) return;
-                
                 const idToDelete = this.pendingDeleteId;
-                this.hideConfirmModal(); // 先关弹窗
-                
+                this.hideConfirmModal();
                 this.products = this.products.filter(p => p.id !== idToDelete);
                 const success = await this.saveProductsToServer();
-                
                 if(success) {
                     this.render();
                     this.showToast('商品已删除');
                 } else {
-                    // 恢复数据（如果需要更严谨可以在这里回滚）
                     this.loadProducts(); 
                 }
             },
-
-            // --- 计算逻辑 ---
 
             calculateAssortment(e) {
                 e.preventDefault();
@@ -579,7 +629,7 @@
                 const flexible = this.products.find(p => p.type === 'flexible');
                 
                 if (!flexible) {
-                    this.showToast('请务必在左侧设置一个"补差价货品"！', 'error');
+                    this.showToast('请务必在数据库添加一个"补差价货品"！', 'error');
                     return;
                 }
                 
@@ -644,7 +694,7 @@
                     content.innerHTML += `
                         <div class="flex justify-between items-center p-2 rounded hover:bg-gray-50 border-b border-gray-50 last:border-0">
                             <div class="flex items-center">
-                                <span class="text-xs font-bold px-2 py-0.5 rounded mr-2 ${typeClass}">${p.type==='fixed'?'定':(p.type==='primary'?'填':'补')}</span>
+                                <span class="text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded mr-2 ${typeClass}">${p.type==='fixed'?'定':(p.type==='primary'?'填':'补')}</span>
                                 <span class="text-sm text-gray-800">${p.name}</span>
                             </div>
                             <div class="text-right">
@@ -667,7 +717,8 @@
                     ${isOverBudget ? `<div class="mt-2 text-xs text-red-500 font-medium bg-red-50 p-2 rounded text-center">⚠️ 警告：固定选购的商品已超过预算</div>` : ''}
                 `;
                 
-                panel.scrollIntoView({ behavior: 'smooth' });
+                // 移动端滚动到结果区
+                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         };
 
