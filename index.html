@@ -74,7 +74,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 3.659c0 3.074-1.8 5.159-2.83 8.15l1.106.635a26.775 26.775 0 015.503 3.725 12.318 12.318 0 01-6.8 0C9.483 18.334 8.173 10.659 9 7z" /></svg>
                 </div>
                 <div>
-                    <h1 class="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">智能配货 <span class="text-[10px] md:text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full border border-purple-200 ml-1 align-middle">v2.3</span></h1>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">智能配货 <span class="text-[10px] md:text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full border border-purple-200 ml-1 align-middle">v2.4</span></h1>
                 </div>
                 <div class="ml-auto md:hidden">
                     <div id="sync-status-mobile" class="text-xs font-medium text-gray-500 flex items-center bg-gray-100 px-2 py-1 rounded-full">
@@ -82,8 +82,14 @@
                     </div>
                 </div>
             </div>
-            <div id="sync-status" class="hidden md:flex text-sm font-medium text-gray-500 items-center bg-gray-100 px-3 py-1.5 rounded-full">
-                <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span> 准备就绪
+            <!-- 
+               修复 1: 给电脑端状态条增加一个父级容器，强制在移动端隐藏。
+               这样 updateStatus JS 更新内部元素的 class 时，不会影响外层的隐藏逻辑 
+            -->
+            <div class="hidden md:flex items-center">
+                <div id="sync-status" class="text-sm font-medium text-gray-500 flex items-center bg-gray-100 px-3 py-1.5 rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span> 准备就绪
+                </div>
             </div>
         </header>
 
@@ -214,10 +220,15 @@
                         <table class="min-w-full divide-y divide-gray-100">
                             <thead class="bg-gray-50 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
-                                    <th class="px-4 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">单价</th>
-                                    <th class="px-4 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
-                                    <th class="px-4 md:px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    <!-- 
+                                        修复 2: 
+                                        - 减小移动端 padding (px-2)
+                                        - 增加 whitespace-nowrap 防止表头换行 
+                                    -->
+                                    <th class="px-2 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">名称</th>
+                                    <th class="px-2 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">单价</th>
+                                    <th class="px-2 md:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">类型</th>
+                                    <th class="px-2 md:px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="product-list-body" class="bg-white divide-y divide-gray-100">
@@ -230,7 +241,7 @@
         </div>
 
         <div class="mt-8 text-center text-gray-400 text-xs pb-4">
-            System v2.3 | Mobile Optimized
+            System v2.4 | Mobile Fixed
         </div>
     </div>
 
@@ -249,7 +260,7 @@
             pendingDeleteId: null,
 
             init() {
-                // 移动端内容复制逻辑: 如果是手机，把桌面端的管理界面移动到折叠面板里
+                // 移动端内容复制逻辑
                 this.handleMobileLayout();
                 window.addEventListener('resize', () => this.handleMobileLayout());
 
@@ -260,7 +271,6 @@
                     }
                     this.loadProducts();
                     
-                    // 重新绑定表单事件（因为可能被移动了 DOM）
                     document.addEventListener('submit', (e) => {
                         if(e.target && e.target.id === 'product-form') this.handleProductFormSubmit(e);
                         if(e.target && e.target.id === 'assortment-form') this.calculateAssortment(e);
@@ -279,15 +289,15 @@
                 const mobileContainer = document.getElementById('mobile-db-container');
                 
                 if (window.innerWidth < 1024) {
-                    // Mobile mode: Move content to details > div
+                    // Mobile mode
                     if (desktopContainer.children.length > 0) {
                         while (desktopContainer.childNodes.length > 0) {
                             mobileContainer.appendChild(desktopContainer.childNodes[0]);
                         }
-                        desktopContainer.classList.add('hidden'); // Hide empty desktop shell
+                        desktopContainer.classList.add('hidden'); 
                     }
                 } else {
-                    // Desktop mode: Move content back
+                    // Desktop mode
                     if (mobileContainer.children.length > 0) {
                         while (mobileContainer.childNodes.length > 0) {
                             desktopContainer.appendChild(mobileContainer.childNodes[0]);
@@ -298,7 +308,6 @@
             },
 
             updateStatus(msg, type = 'normal') {
-                // 同时更新桌面和移动端的状态指示器
                 const els = [document.getElementById('sync-status'), document.getElementById('sync-status-mobile')];
                 
                 els.forEach(el => {
@@ -306,7 +315,8 @@
                     let colorClass = type === 'error' ? 'bg-red-100 text-red-600' : (type === 'loading' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600');
                     let dotColor = type === 'error' ? 'bg-red-500' : (type === 'loading' ? 'bg-blue-500' : 'bg-green-500');
                     
-                    el.className = `text-xs font-semibold flex items-center px-3 py-1 rounded-full transition-all duration-300 ${colorClass}`;
+                    // 更新为 text-xs md:text-sm，让桌面端稍微大一点
+                    el.className = `text-xs md:text-sm font-semibold flex items-center px-3 py-1 rounded-full transition-all duration-300 ${colorClass}`;
                     el.innerHTML = type === 'loading' 
                         ? `<div class="loader mr-2" style="width:10px;height:10px;border-width:2px;"></div> ${msg}` 
                         : `<span class="w-2 h-2 rounded-full ${dotColor} mr-2"></span> ${msg}`;
@@ -405,14 +415,15 @@
 
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50 transition-colors";
+                    // 修复 2：在 JS 生成的表格行中也应用更小的 padding 和 nowrap
                     tr.innerHTML = `
-                        <td class="px-4 py-3">
-                            <div class="text-sm font-medium text-gray-900">${p.name}</div>
+                        <td class="px-2 md:px-4 py-3 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900 truncate max-w-[100px] md:max-w-none">${p.name}</div>
                             <div class="text-xs text-gray-400">${p.unit}</div>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-600">¥${p.price.toFixed(2)}</td>
-                        <td class="px-4 py-3">${badge}</td>
-                        <td class="px-4 py-3 text-right text-sm font-medium space-x-2 whitespace-nowrap">
+                        <td class="px-2 md:px-4 py-3 text-sm text-gray-600 whitespace-nowrap">¥${p.price.toFixed(2)}</td>
+                        <td class="px-2 md:px-4 py-3 whitespace-nowrap">${badge}</td>
+                        <td class="px-2 md:px-4 py-3 text-right text-sm font-medium space-x-1 whitespace-nowrap">
                             <button onclick="APP.startEdit('${p.id}')" class="text-indigo-600 hover:text-indigo-900 px-1">修改</button>
                             <button onclick="APP.showConfirmModal('${p.id}')" class="text-red-600 hover:text-red-900 px-1">删除</button>
                         </td>
@@ -451,7 +462,6 @@
                     
                     const details = document.createElement('details');
                     details.className = "group bg-white rounded border border-gray-200 overflow-hidden mb-2 shadow-sm";
-                    // 默认折叠，点击展开，节省手机空间
                     details.open = false; 
 
                     const summary = document.createElement('summary');
@@ -474,7 +484,6 @@
                                 <div class="text-sm font-medium text-gray-800 truncate" title="${item.name}">${item.name}</div>
                                 <div class="text-xs text-gray-500">¥${item.price}/${item.unit}</div>
                             </div>
-                            <!-- 增大输入框方便点击 -->
                             <input type="number" id="inp-${item.id}" inputmode="numeric" data-product-id="${item.id}" class="w-16 h-9 text-center text-base border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="0" min="0">
                         `;
                         content.appendChild(div);
@@ -547,7 +556,6 @@
                 const p = this.products.find(x => x.id === id);
                 if (!p) return;
                 
-                // 如果在移动端且数据库面板折叠，自动展开
                 const mobileDetails = document.querySelector('details.lg\\:hidden');
                 if(mobileDetails) mobileDetails.open = true;
 
@@ -571,7 +579,6 @@
                     document.getElementById('form-actions').appendChild(cBtn);
                 }
                 
-                // 滚动到表单
                 document.getElementById('product-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
             },
 
@@ -717,7 +724,6 @@
                     ${isOverBudget ? `<div class="mt-2 text-xs text-red-500 font-medium bg-red-50 p-2 rounded text-center">⚠️ 警告：固定选购的商品已超过预算</div>` : ''}
                 `;
                 
-                // 移动端滚动到结果区
                 panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         };
